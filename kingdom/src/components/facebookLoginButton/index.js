@@ -1,46 +1,50 @@
 import React, {Component} from 'react';
-import {View} from 'react-native';
-import {LoginButton, AccessToken} from 'react-native-fbsdk';
+import {View, Button} from 'react-native';
+import {LoginManager, AccessToken} from 'react-native-fbsdk';
 import {backend} from '../../config/backendServer';
 import axios from 'axios';
 
 export default class FacebookLoginButton extends Component {
   componentDidMount() {
-    this.getAndSendFacebookAccessToken();
+    this.getAccessToken();
   }
 
-  getAndSendFacebookAccessToken = () => {
+  getAccessToken = () => {
     AccessToken.getCurrentAccessToken().then((data) => {
-      axios
-        .post(
-          backend.url + '/facebook_login',
-          {accessToken: data.accessToken},
-          {headers: {'Content-Type': 'application/json'}},
-        )
-        .then((res) => {
-          console.log(res);
-        });
+      if (data.accessToken && data.userID) {
+        axios
+          .post(
+            backend.url + '/facebook_login',
+            {
+              accessToken: data.accessToken,
+              userId: data.userID,
+            },
+            {headers: {'Content-Type': 'application/json'}},
+          )
+          .then((res) => {
+            // console.log(res);
+          });
+      }
     });
   };
 
-  render() {
-    const onLogin = (error, result) => {
-      if (error) {
-        alert('Login failed with error: ' + error.message);
-      } else if (result.isCancelled) {
-        alert('Login was cancelled');
-      } else {
-        this.getAndSendFacebookAccessToken();
-      }
-    };
+  getAndSendFacebookAccessToken = () => {
+    LoginManager.logInWithPermissions(['public_profile', 'email']).then(
+      (result) => {
+        this.getAccessToken();
+      },
+      (error) => {
+        console.log('Login fail with error: ' + error);
+      },
+    );
+  };
 
+  render() {
     return (
       <View>
-        <LoginButton
-          publishPermissions={['email']}
-          onLoginFinished={onLogin}
-          onLogoutFinished={() => alert('User logged out')}
-        />
+        <Button onPress={this.getAndSendFacebookAccessToken} title="Login">
+          Login
+        </Button>
       </View>
     );
   }
